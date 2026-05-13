@@ -1,39 +1,78 @@
-import { ResultSetHeader, RowDataPacket } from "mysql2";
-import { pool } from "../db.config.js";
+import { prisma } from "../db.config.js";
 import { ChallengeMissionDto } from "../dtos/mission.dto.js";
 
-export const getMissionById = async (
-  missionId: number
-): Promise<RowDataPacket | null> => {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT * FROM missions WHERE id = ?`,
-    [missionId]
-  );
-
-  return rows[0] || null;
+export const getMissionById = async (missionId: number) => {
+  return await prisma.mission.findFirst({
+    where: {
+      id: missionId,
+    },
+  });
 };
 
 export const getUserMission = async (
   userId: number,
   missionId: number
-): Promise<RowDataPacket | null> => {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT * FROM user_missions_ch5
-     WHERE user_id = ? AND mission_id = ?`,
-    [userId, missionId]
-  );
-
-  return rows[0] || null;
+) => {
+  return await prisma.userMissionCh5.findFirst({
+    where: {
+      userId,
+      missionId,
+    },
+  });
 };
 
 export const createUserMission = async (
   data: ChallengeMissionDto
 ): Promise<number> => {
-  const [result] = await pool.query<ResultSetHeader>(
-    `INSERT INTO user_missions_ch5 (user_id, mission_id, status)
-     VALUES (?, ?, 'ONGOING')`,
-    [data.userId, data.missionId]
-  );
+  const created = await prisma.userMissionCh5.create({
+    data: {
+      userId: data.userId,
+      missionId: data.missionId,
+      status: "ONGOING",
+    },
+  });
 
-  return result.insertId;
+  return created.id;
+};
+
+export const getMissionsByStoreId = async (storeId: number) => {
+  return await prisma.mission.findMany({
+    where: {
+      storeId,
+    },
+    orderBy: {
+      id: "asc",
+    },
+  });
+};
+
+export const getOngoingMissionsByUserId = async (userId: number) => {
+  return await prisma.userMissionCh5.findMany({
+    where: {
+      userId,
+      status: "ONGOING",
+    },
+    include: {
+      mission: true,
+    },
+    orderBy: {
+      id: "asc",
+    },
+  });
+};
+
+export const completeUserMission = async (
+  userId: number,
+  missionId: number
+) => {
+  return await prisma.userMissionCh5.updateMany({
+    where: {
+      userId,
+      missionId,
+      status: "ONGOING",
+    },
+    data: {
+      status: "COMPLETED",
+    },
+  });
 };

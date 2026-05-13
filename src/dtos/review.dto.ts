@@ -33,3 +33,46 @@ export const bodyToReview = (
     score: body.score,
   };
 };
+
+export type ReviewItem = {
+  id: number;
+  content: string;
+  score: number;
+  createdAt: Date;
+  user: {
+    id: number;
+    name: string;
+  };
+};
+
+export type ReviewListResponse = {
+  data: {
+    id: number;
+    nickname: string;
+    score: number;
+    createdAt: Date;
+    content: string;
+  }[];
+  pagination: {
+    cursor: number | null;
+  };
+};
+
+export const responseFromReviews = (
+  reviews: ReviewItem[]
+): ReviewListResponse => {
+  const lastReview = reviews[reviews.length - 1];
+
+  return {
+    data: reviews.map((review) => ({
+      id: review.id,
+      nickname: review.user.name,
+      score: review.score,
+      createdAt: review.createdAt,
+      content: review.content,
+    })),
+    pagination: {
+      cursor: lastReview ? lastReview.id : null,
+    },
+  };
+};

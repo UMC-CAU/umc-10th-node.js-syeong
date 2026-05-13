@@ -1,29 +1,50 @@
 import { ChallengeMissionDto } from "../dtos/mission.dto.js";
 import {
+  createUserMission,
   getMissionById,
   getUserMission,
-  createUserMission,
+  getMissionsByStoreId,
+  getOngoingMissionsByUserId,
+  completeUserMission,
 } from "../repositories/mission.repository.js";
 
-export const challengeMissionService = async (data: ChallengeMissionDto) => {
+export const challengeMissionService = async (
+  data: ChallengeMissionDto
+): Promise<number> => {
   const mission = await getMissionById(data.missionId);
 
   if (!mission) {
-    throw new Error("도전하려는 미션이 존재하지 않습니다.");
+    throw new Error("존재하지 않는 미션입니다.");
   }
 
-  const existingMission = await getUserMission(data.userId, data.missionId);
+  const existing = await getUserMission(data.userId, data.missionId);
 
-  if (existingMission) {
+  if (existing) {
     throw new Error("이미 도전 중인 미션입니다.");
   }
 
-  const userMissionId = await createUserMission(data);
+  return await createUserMission(data);
+};
+
+export const listStoreMissionsService = async (storeId: number) => {
+  return await getMissionsByStoreId(storeId);
+};
+
+export const listMyOngoingMissionsService = async (userId: number) => {
+  return await getOngoingMissionsByUserId(userId);
+};
+
+export const completeMissionService = async (
+  userId: number,
+  missionId: number
+) => {
+  const result = await completeUserMission(userId, missionId);
+
+  if (result.count === 0) {
+    throw new Error("진행 중인 미션을 찾을 수 없습니다.");
+  }
 
   return {
-    userMissionId,
-    userId: data.userId,
-    missionId: data.missionId,
-    status: "ONGOING",
+    updatedCount: result.count,
   };
 };

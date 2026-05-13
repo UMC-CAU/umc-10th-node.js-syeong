@@ -19,3 +19,18 @@ export const addReviewService = async (data: ReviewDto) => {
     score: data.score,
   };
 };
+
+import { getAllStoreReviews } from "../repositories/review.repository.js";
+import {
+  responseFromReviews,
+  ReviewListResponse,
+} from "../dtos/review.dto.js";
+
+export const listStoreReviews = async (
+  storeId: number,
+  cursor: number
+): Promise<ReviewListResponse> => {
+  const reviews = await getAllStoreReviews(storeId, cursor);
+
+  return responseFromReviews(reviews);
+};

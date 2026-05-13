@@ -1,25 +1,114 @@
-import { Request, Response } from "express";
+import { Controller, Get, Patch, Path, Post, Route, Tags } from "tsoa";
 import { StatusCodes } from "http-status-codes";
 import { paramsToChallengeMission } from "../dtos/mission.dto.js";
-import { challengeMissionService } from "../services/mission.service.js";
+import {
+  challengeMissionService,
+  listStoreMissionsService,
+  listMyOngoingMissionsService,
+  completeMissionService,
+} from "../services/mission.service.js";
+import type { ApiResponse } from "../common/responses/response.js";
+import { success } from "../common/responses/response.js";
+import { AppError } from "../common/errors/app.error.js";
 
-export const challengeMission = async (req: Request, res: Response) => {
-  try {
-    const missionId = Number(req.params.missionId);
-    const challengeDto = paramsToChallengeMission(missionId);
+@Route("")
+@Tags("Missions")
+export class MissionController extends Controller {
+  @Post("missions/{missionId}/challenges")
+  public async challengeMission(
+    @Path() missionId: number,
+  ): Promise<ApiResponse<unknown>> {
+    try {
+      const challengeDto = paramsToChallengeMission(missionId);
+      const result = await challengeMissionService(challengeDto);
 
-    const result = await challengeMissionService(challengeDto);
+      this.setStatus(StatusCodes.CREATED);
+      return success({
+        code: "MISSION201",
+        message: "미션 도전 성공",
+        result,
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
 
-    return res.status(StatusCodes.CREATED).json({
-      isSuccess: true,
-      code: "MISSION201",
-      message: "미션 도전 성공",
-      result,
-    });
-  } catch (error) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      isSuccess: false,
-      message: error instanceof Error ? error.message : "알 수 없는 오류",
-    });
+      throw new AppError({
+        errorCode: "MISSION400",
+        statusCode: StatusCodes.BAD_REQUEST,
+        message: error instanceof Error ? error.message : "미션 도전 실패",
+      });
+    }
   }
-};
+
+  @Get("stores/{storeId}/missions")
+  public async getStoreMissions(
+    @Path() storeId: number,
+  ): Promise<ApiResponse<unknown>> {
+    try {
+      const result = await listStoreMissionsService(storeId);
+
+      this.setStatus(StatusCodes.OK);
+      return success({
+        code: "MISSION2001",
+        message: "특정 가게의 미션 목록 조회 성공",
+        result,
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+
+      throw new AppError({
+        errorCode: "MISSION400",
+        statusCode: StatusCodes.BAD_REQUEST,
+        message: error instanceof Error ? error.message : "미션 목록 조회 실패",
+      });
+    }
+  }
+
+  @Get("users/{userId}/missions/ongoing")
+  public async getMyOngoingMissions(
+    @Path() userId: number,
+  ): Promise<ApiResponse<unknown>> {
+    try {
+      const result = await listMyOngoingMissionsService(userId);
+
+      this.setStatus(StatusCodes.OK);
+      return success({
+        code: "MISSION2002",
+        message: "내가 진행 중인 미션 목록 조회 성공",
+        result,
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+
+      throw new AppError({
+        errorCode: "MISSION400",
+        statusCode: StatusCodes.BAD_REQUEST,
+        message: error instanceof Error ? error.message : "진행 중인 미션 조회 실패",
+      });
+    }
+  }
+
+  @Patch("users/{userId}/missions/{missionId}/complete")
+  public async completeMission(
+    @Path() userId: number,
+    @Path() missionId: number,
+  ): Promise<ApiResponse<unknown>> {
+    try {
+      const result = await completeMissionService(userId, missionId);
+
+      this.setStatus(StatusCodes.OK);
+      return success({
+        code: "MISSION2003",
+        message: "미션 진행 완료 처리 성공",
+        result,
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+
+      throw new AppError({
+        errorCode: "MISSION400",
+        statusCode: StatusCodes.BAD_REQUEST,
+        message: error instanceof Error ? error.message : "미션 완료 처리 실패",
+      });
+    }
+  }
+}

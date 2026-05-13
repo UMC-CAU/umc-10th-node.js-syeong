@@ -1,13 +1,49 @@
-import { ResultSetHeader } from "mysql2";
-import { pool } from "../db.config.js";
+import { prisma } from "../db.config.js";
 import { ReviewDto } from "../dtos/review.dto.js";
 
 export const createReview = async (data: ReviewDto): Promise<number> => {
-  const [result] = await pool.query<ResultSetHeader>(
-    `INSERT INTO reviews (store_id, user_id, content, score)
-     VALUES (?, ?, ?, ?)`,
-    [data.storeId, data.userId, data.content, data.score]
-  );
+  const created = await prisma.review.create({
+    data: {
+      storeId: data.storeId,
+      userId: data.userId,
+      content: data.content,
+      score: data.score,
+    },
+  });
 
-  return result.insertId;
+  return created.id;
+};
+
+export const getAllStoreReviews = async (
+  storeId: number,
+  cursor: number
+) => {
+  return await prisma.review.findMany({
+    select: {
+      id: true,
+      content: true,
+      score: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    where: {
+      storeId,
+      ...(cursor > 0
+        ? {
+            id: {
+              gt: cursor,
+            },
+          }
+        : {}),
+    },
+    orderBy: {
+      id: "asc",
+    },
+    take: 5,
+  });
 };
