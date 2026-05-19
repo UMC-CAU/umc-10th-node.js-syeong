@@ -1,5 +1,6 @@
 export interface ChallengeMissionDto {
   missionId: number;
+  /** 사용자 ID */
   userId: number;
 }
 

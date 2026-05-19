@@ -1,10 +1,25 @@
-import { Controller, Get, Middlewares, Request, Route, Tags } from "tsoa";
+import {
+  Controller,
+  Get,
+  Middlewares,
+  Request,
+  Route,
+  Tags,
+  SuccessResponse,
+  Response as TsoaResponse,
+} from "tsoa";
 import { Request as ExpressRequest } from "express";
 import { authorizeUser } from "../common/middlewares/auth.middleware.js";
 
 @Route("users")
 @Tags("Users")
 export class UserController extends Controller {
+  /**
+   * 게스트 사용자 조회 API
+   * @summary 게스트 로그인 또는 테스트용 사용자 정보를 조회합니다.
+   */
+  @SuccessResponse(200, "게스트 사용자 조회 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "게스트 사용자 조회 실패")
   @Get("guest")
   public async handleGuestPage(): Promise<string> {
     return `

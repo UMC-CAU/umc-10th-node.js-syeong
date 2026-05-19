@@ -1,6 +1,8 @@
 export interface StoreRequest {
   name: string;
+  /** 가게 주소 */
   address: string;
+  /** 가게 카테고리 */
   category: string;
 }
 

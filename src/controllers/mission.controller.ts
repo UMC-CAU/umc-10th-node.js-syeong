@@ -1,4 +1,14 @@
-import { Controller, Get, Patch, Path, Post, Route, Tags } from "tsoa";
+import {
+  Controller,
+  Get,
+  Patch,
+  Path,
+  Post,
+  Route,
+  Tags,
+  SuccessResponse,
+  Response as TsoaResponse,
+} from "tsoa";
 import { StatusCodes } from "http-status-codes";
 import { paramsToChallengeMission } from "../dtos/mission.dto.js";
 import {
@@ -14,6 +24,12 @@ import { AppError } from "../common/errors/app.error.js";
 @Route("")
 @Tags("Missions")
 export class MissionController extends Controller {
+  /**
+   * 미션 도전 API
+   * @summary 사용자가 특정 미션에 도전합니다.
+   */
+  @SuccessResponse(201, "미션 도전 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "미션 도전 실패")
   @Post("missions/{missionId}/challenges")
   public async challengeMission(
     @Path() missionId: number,
@@ -39,6 +55,12 @@ export class MissionController extends Controller {
     }
   }
 
+  /**
+   * 가게 미션 목록 조회 API
+   * @summary 특정 가게의 미션 목록을 조회합니다.
+   */
+  @SuccessResponse(200, "가게 미션 목록 조회 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "가게 미션 목록 조회 실패")
   @Get("stores/{storeId}/missions")
   public async getStoreMissions(
     @Path() storeId: number,
@@ -63,6 +85,12 @@ export class MissionController extends Controller {
     }
   }
 
+  /**
+   * 진행 중인 미션 목록 조회 API
+   * @summary 사용자가 진행 중인 미션 목록을 조회합니다.
+   */
+  @SuccessResponse(200, "진행 중인 미션 목록 조회 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "진행 중인 미션 목록 조회 실패")
   @Get("users/{userId}/missions/ongoing")
   public async getMyOngoingMissions(
     @Path() userId: number,
@@ -87,6 +115,12 @@ export class MissionController extends Controller {
     }
   }
 
+  /**
+   * 미션 완료 API
+   * @summary 사용자의 진행 중인 미션을 완료 상태로 변경합니다.
+   */
+  @SuccessResponse(200, "미션 완료 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "미션 완료 실패")
   @Patch("users/{userId}/missions/{missionId}/complete")
   public async completeMission(
     @Path() userId: number,

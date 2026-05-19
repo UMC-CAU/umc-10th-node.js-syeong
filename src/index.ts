@@ -5,6 +5,9 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import { RegisterRoutes } from "./generated/routes.js";
 import { AppError } from "./common/errors/app.error.js";
+import swaggerUi from "swagger-ui-express";
+import fs from "node:fs";
+import path from "node:path";
 
 dotenv.config();
 
@@ -33,6 +36,12 @@ app.use(cookieParser());
 app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+const swaggerFile = JSON.parse(
+  fs.readFileSync(path.resolve(process.cwd(), "dist/swagger.json"), "utf8")
+);
+
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World! This is TypeScript Server!");

@@ -1,4 +1,13 @@
-import { Body, Controller, Path, Post, Route, Tags } from "tsoa";
+import {
+  Body,
+  Controller,
+  Path,
+  Post,
+  Route,
+  Tags,
+  SuccessResponse,
+  Response as TsoaResponse,
+} from "tsoa";
 import { StatusCodes } from "http-status-codes";
 import { bodyToStore, StoreRequest } from "../dtos/store.dto.js";
 import { addStoreService } from "../services/store.service.js";
@@ -9,6 +18,12 @@ import { AppError } from "../common/errors/app.error.js";
 @Route("regions/{regionId}/stores")
 @Tags("Stores")
 export class StoreController extends Controller {
+  /**
+   * 가게 등록 API
+   * @summary 특정 지역에 새로운 가게를 등록합니다.
+   */
+  @SuccessResponse(201, "가게 등록 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "가게 등록 실패")
   @Post()
   public async addStore(
     @Path() regionId: number,

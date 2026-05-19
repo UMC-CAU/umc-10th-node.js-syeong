@@ -1,5 +1,6 @@
 export interface ReviewRequest {
   content: string;
+  /** 리뷰 점수, 1점 이상 5점 이하 */
   score: number;
 }
 
