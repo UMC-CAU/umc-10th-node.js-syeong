@@ -8,6 +8,7 @@ import {
   Tags,
   SuccessResponse,
   Response as TsoaResponse,
+  Request,
 } from "tsoa";
 import { StatusCodes } from "http-status-codes";
 import { paramsToChallengeMission } from "../dtos/mission.dto.js";
@@ -21,6 +22,20 @@ import type { ApiResponse } from "../common/responses/response.js";
 import { success } from "../common/responses/response.js";
 import { AppError } from "../common/errors/app.error.js";
 
+const getLoginUserId = (req: any) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError({
+      errorCode: "AUTH401",
+      statusCode: StatusCodes.UNAUTHORIZED,
+      message: "로그인이 필요합니다.",
+    });
+  }
+
+  return userId;
+};
+
 @Route("")
 @Tags("Missions")
 export class MissionController extends Controller {
@@ -33,9 +48,11 @@ export class MissionController extends Controller {
   @Post("missions/{missionId}/challenges")
   public async challengeMission(
     @Path() missionId: number,
+    @Request() req: any
   ): Promise<ApiResponse<unknown>> {
     try {
-      const challengeDto = paramsToChallengeMission(missionId);
+      const userId = getLoginUserId(req);
+      const challengeDto = paramsToChallengeMission(missionId, userId);
       const result = await challengeMissionService(challengeDto);
 
       this.setStatus(StatusCodes.CREATED);
@@ -63,7 +80,7 @@ export class MissionController extends Controller {
   @TsoaResponse<ApiResponse<null>>(400, "가게 미션 목록 조회 실패")
   @Get("stores/{storeId}/missions")
   public async getStoreMissions(
-    @Path() storeId: number,
+    @Path() storeId: number
   ): Promise<ApiResponse<unknown>> {
     try {
       const result = await listStoreMissionsService(storeId);
@@ -87,16 +104,27 @@ export class MissionController extends Controller {
 
   /**
    * 진행 중인 미션 목록 조회 API
-   * @summary 사용자가 진행 중인 미션 목록을 조회합니다.
+   * @summary 로그인한 사용자가 진행 중인 미션 목록을 조회합니다.
    */
   @SuccessResponse(200, "진행 중인 미션 목록 조회 성공")
   @TsoaResponse<ApiResponse<null>>(400, "진행 중인 미션 목록 조회 실패")
   @Get("users/{userId}/missions/ongoing")
   public async getMyOngoingMissions(
     @Path() userId: number,
+    @Request() req: any
   ): Promise<ApiResponse<unknown>> {
     try {
-      const result = await listMyOngoingMissionsService(userId);
+      const loginUserId = getLoginUserId(req);
+
+      if (userId !== loginUserId) {
+        throw new AppError({
+          errorCode: "AUTH403",
+          statusCode: StatusCodes.FORBIDDEN,
+          message: "본인의 미션만 조회할 수 있습니다.",
+        });
+      }
+
+      const result = await listMyOngoingMissionsService(loginUserId);
 
       this.setStatus(StatusCodes.OK);
       return success({
@@ -125,9 +153,20 @@ export class MissionController extends Controller {
   public async completeMission(
     @Path() userId: number,
     @Path() missionId: number,
+    @Request() req: any
   ): Promise<ApiResponse<unknown>> {
     try {
-      const result = await completeMissionService(userId, missionId);
+      const loginUserId = getLoginUserId(req);
+
+      if (userId !== loginUserId) {
+        throw new AppError({
+          errorCode: "AUTH403",
+          statusCode: StatusCodes.FORBIDDEN,
+          message: "본인의 미션만 완료할 수 있습니다.",
+        });
+      }
+
+      const result = await completeMissionService(loginUserId, missionId);
 
       this.setStatus(StatusCodes.OK);
       return success({

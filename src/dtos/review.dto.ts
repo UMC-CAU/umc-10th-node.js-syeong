@@ -13,10 +13,15 @@ export interface ReviewDto {
 
 export const bodyToReview = (
   storeId: number,
-  body: ReviewRequest
+  body: ReviewRequest,
+  userId: number
 ): ReviewDto => {
   if (!storeId) {
     throw new Error("가게 ID가 올바르지 않습니다.");
+  }
+
+  if (!userId) {
+    throw new Error("로그인한 사용자 정보가 없습니다.");
   }
 
   if (!body.content || !body.score) {
@@ -29,7 +34,7 @@ export const bodyToReview = (
 
   return {
     storeId,
-    userId: 1,
+    userId,
     content: body.content,
     score: body.score,
   };

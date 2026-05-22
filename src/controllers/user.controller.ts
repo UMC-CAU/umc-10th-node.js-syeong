@@ -1,7 +1,9 @@
 import {
+  Body,
   Controller,
   Get,
   Middlewares,
+  Patch,
   Request,
   Route,
   Tags,
@@ -9,7 +11,30 @@ import {
   Response as TsoaResponse,
 } from "tsoa";
 import { Request as ExpressRequest } from "express";
+import { StatusCodes } from "http-status-codes";
 import { authorizeUser } from "../common/middlewares/auth.middleware.js";
+import type { ApiResponse } from "../common/responses/response.js";
+import { success } from "../common/responses/response.js";
+import { AppError } from "../common/errors/app.error.js";
+import {
+  bodyToUpdateMyInfo,
+  UpdateMyInfoRequest,
+} from "../dtos/user.dto.js";
+import { updateMyInfoService } from "../services/user.service.js";
+
+const getLoginUserId = (req: any) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError({
+      errorCode: "AUTH401",
+      statusCode: StatusCodes.UNAUTHORIZED,
+      message: "로그인이 필요합니다.",
+    });
+  }
+
+  return userId;
+};
 
 @Route("users")
 @Tags("Users")
@@ -62,5 +87,39 @@ export class UserController extends Controller {
   public async handleSetLogout(@Request() req: ExpressRequest): Promise<string> {
     req.res!.clearCookie("username");
     return '로그아웃 완료. <a href="/api/v1/users/guest">메인으로</a>';
+  }
+
+  /**
+   * 내 정보 수정 API
+   * @summary 로그인한 사용자의 정보를 수정합니다.
+   */
+  @SuccessResponse(200, "내 정보 수정 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "내 정보 수정 실패")
+  @TsoaResponse<ApiResponse<null>>(401, "로그인 필요")
+  @Patch("me")
+  public async updateMyInfo(
+    @Body() body: UpdateMyInfoRequest,
+    @Request() req: any
+  ): Promise<ApiResponse<unknown>> {
+    try {
+      const userId = getLoginUserId(req);
+      const updateData = bodyToUpdateMyInfo(body);
+      const result = await updateMyInfoService(userId, updateData);
+
+      this.setStatus(StatusCodes.OK);
+      return success({
+        code: "USER2001",
+        message: "내 정보 수정 성공",
+        result,
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+
+      throw new AppError({
+        errorCode: "USER400",
+        statusCode: StatusCodes.BAD_REQUEST,
+        message: error instanceof Error ? error.message : "내 정보 수정 실패",
+      });
+    }
   }
 }

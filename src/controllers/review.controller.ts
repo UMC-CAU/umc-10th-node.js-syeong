@@ -9,6 +9,7 @@ import {
   Tags,
   SuccessResponse,
   Response as TsoaResponse,
+  Request,
 } from "tsoa";
 import { StatusCodes } from "http-status-codes";
 import { bodyToReview, ReviewRequest } from "../dtos/review.dto.js";
@@ -19,6 +20,20 @@ import {
 import type { ApiResponse } from "../common/responses/response.js";
 import { success } from "../common/responses/response.js";
 import { AppError } from "../common/errors/app.error.js";
+
+const getLoginUserId = (req: any) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError({
+      errorCode: "AUTH401",
+      statusCode: StatusCodes.UNAUTHORIZED,
+      message: "로그인이 필요합니다.",
+    });
+  }
+
+  return userId;
+};
 
 @Route("stores/{storeId}/reviews")
 @Tags("Reviews")
@@ -33,9 +48,11 @@ export class ReviewController extends Controller {
   public async addReview(
     @Path() storeId: number,
     @Body() body: ReviewRequest,
+    @Request() req: any
   ): Promise<ApiResponse<unknown>> {
     try {
-      const reviewDto = bodyToReview(storeId, body);
+      const userId = getLoginUserId(req);
+      const reviewDto = bodyToReview(storeId, body, userId);
       const result = await addReviewService(reviewDto);
 
       this.setStatus(StatusCodes.CREATED);
@@ -64,7 +81,7 @@ export class ReviewController extends Controller {
   @Get()
   public async handleListStoreReviews(
     @Path() storeId: number,
-    @Query() cursor?: number,
+    @Query() cursor?: number
   ): Promise<ApiResponse<unknown>> {
     try {
       const result = await listStoreReviews(storeId, cursor ?? 0);

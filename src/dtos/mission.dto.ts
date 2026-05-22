@@ -5,14 +5,19 @@ export interface ChallengeMissionDto {
 }
 
 export const paramsToChallengeMission = (
-  missionId: number
+  missionId: number,
+  userId: number
 ): ChallengeMissionDto => {
   if (!missionId) {
     throw new Error("미션 ID가 올바르지 않습니다.");
   }
 
+  if (!userId) {
+    throw new Error("로그인한 사용자 정보가 없습니다.");
+  }
+
   return {
     missionId,
-    userId: 1,
+    userId,
   };
 };
