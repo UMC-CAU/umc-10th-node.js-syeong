@@ -1,0 +1,125 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Middlewares,
+  Patch,
+  Request,
+  Route,
+  Tags,
+  SuccessResponse,
+  Response as TsoaResponse,
+} from "tsoa";
+import { Request as ExpressRequest } from "express";
+import { StatusCodes } from "http-status-codes";
+import { authorizeUser } from "../common/middlewares/auth.middleware.js";
+import type { ApiResponse } from "../common/responses/response.js";
+import { success } from "../common/responses/response.js";
+import { AppError } from "../common/errors/app.error.js";
+import {
+  bodyToUpdateMyInfo,
+  UpdateMyInfoRequest,
+} from "../dtos/user.dto.js";
+import { updateMyInfoService } from "../services/user.service.js";
+
+const getLoginUserId = (req: any) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError({
+      errorCode: "AUTH401",
+      statusCode: StatusCodes.UNAUTHORIZED,
+      message: "로그인이 필요합니다.",
+    });
+  }
+
+  return userId;
+};
+
+@Route("users")
+@Tags("Users")
+export class UserController extends Controller {
+  /**
+   * 게스트 사용자 조회 API
+   * @summary 게스트 로그인 또는 테스트용 사용자 정보를 조회합니다.
+   */
+  @SuccessResponse(200, "게스트 사용자 조회 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "게스트 사용자 조회 실패")
+  @Get("guest")
+  public async handleGuestPage(): Promise<string> {
+    return `
+      <h1>게스트 페이지</h1>
+      <p>이 페이지는 로그인이 필요 없습니다.</p>
+      <ul>
+        <li><a href="/api/v1/users/mypage">마이페이지 (로그인 필요)</a></li>
+        <li><a href="/api/v1/users/set-login">로그인 쿠키 생성</a></li>
+      </ul>
+    `;
+  }
+
+  @Get("login")
+  public async handleLoginPage(): Promise<string> {
+    return `
+      <h1>로그인 페이지</h1>
+      <p>로그인이 필요한 페이지에서 튕겨나오면 여기로 옵니다.</p>
+      <a href="/api/v1/users/set-login">로그인하기</a>
+    `;
+  }
+
+  @Get("mypage")
+  @Middlewares(authorizeUser())
+  public async handleMypage(@Request() req: ExpressRequest): Promise<string> {
+    return `
+      <h1>마이페이지</h1>
+      <p>환영합니다, ${req.cookies.username}님!</p>
+      <p>이 페이지는 로그인한 사람만 볼 수 있습니다.</p>
+      <a href="/api/v1/users/set-logout">로그아웃</a>
+    `;
+  }
+
+  @Get("set-login")
+  public async handleSetLogin(@Request() req: ExpressRequest): Promise<string> {
+    req.res!.cookie("username", "UMC10th", { maxAge: 3600000 });
+    return '로그인 쿠키(username=UMC10th) 생성 완료! <a href="/api/v1/users/mypage">마이페이지로 이동</a>';
+  }
+
+  @Get("set-logout")
+  public async handleSetLogout(@Request() req: ExpressRequest): Promise<string> {
+    req.res!.clearCookie("username");
+    return '로그아웃 완료. <a href="/api/v1/users/guest">메인으로</a>';
+  }
+
+  /**
+   * 내 정보 수정 API
+   * @summary 로그인한 사용자의 정보를 수정합니다.
+   */
+  @SuccessResponse(200, "내 정보 수정 성공")
+  @TsoaResponse<ApiResponse<null>>(400, "내 정보 수정 실패")
+  @TsoaResponse<ApiResponse<null>>(401, "로그인 필요")
+  @Patch("me")
+  public async updateMyInfo(
+    @Body() body: UpdateMyInfoRequest,
+    @Request() req: any
+  ): Promise<ApiResponse<unknown>> {
+    try {
+      const userId = getLoginUserId(req);
+      const updateData = bodyToUpdateMyInfo(body);
+      const result = await updateMyInfoService(userId, updateData);
+
+      this.setStatus(StatusCodes.OK);
+      return success({
+        code: "USER2001",
+        message: "내 정보 수정 성공",
+        result,
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+
+      throw new AppError({
+        errorCode: "USER400",
+        statusCode: StatusCodes.BAD_REQUEST,
+        message: error instanceof Error ? error.message : "내 정보 수정 실패",
+      });
+    }
+  }
+}
